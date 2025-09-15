@@ -1,1 +1,3 @@
-/.idea/
+/.idea//home/lux/PhpstormProjects/testTask_for_EquipGroup
+.env
+database/db/*

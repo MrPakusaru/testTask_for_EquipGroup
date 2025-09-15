@@ -1,0 +1,77 @@
+#Версия docker-compose, которую мы используем. Зависит от установленной версии docker
+version: '3.9'
+
+#Внутренняя сеть меж контейнерами
+networks:
+  app-network:
+    driver: bridge
+
+#Контейнеры
+services:
+
+  #Сервер-контейнер для бэкенда (с фронтом)
+  server:
+    #Сборка из образа nginx
+    image: nginx:1.22-alpine
+    #Название контейнера для управления на стороне разработчика
+    container_name: server_container
+    #{Порт на стороне разработчика}:{Порт на стороне контейнера}
+    ports:
+      - "81:80"
+    #"Внутренняя сеть" для взаимодействия между контейнерами
+    networks:
+      - app-network
+    #Папки, в которых происходит дублирование файлов на сторонах >>> {у разработчика}:{внутри контейнера}
+    volumes:
+      - ./server/nginx.conf:/etc/nginx/nginx.conf
+      - ./application/laravel:/var/www
+    #Запускается или пакуется ТОЛЬКО после указанных ниже контейнеров (не их названий на стороне разработчика)
+    depends_on:
+      - application
+
+  #PHP контейнер
+  application:
+    user: 'www-data:www-data'
+    #Сборка из Dockerfile
+    build:
+      context: application
+      dockerfile: application.Dockerfile
+    #Название контейнера для управления на стороне разработчика
+    container_name: application_container
+    #"Внутренняя сеть" для взаимодействия между контейнерами
+    networks:
+      - app-network
+    #Папки, в которых происходит дублирование файлов на сторонах >>> {у разработчика}:{внутри контейнера}
+    volumes:
+      - ./application/laravel:/var/www
+    #Заранее заданные внутри контейнера переменные среды для дальнейшего использования
+    environment:
+      - DB_HOST=mysql_container
+    #Запускается или пакуется ТОЛЬКО после указанных ниже контейнеров (не их названий на стороне разработчика)
+    depends_on:
+      - database
+
+  #БД-контейнер
+  database:
+    #Сборка из образа mysql
+    image: mysql:8.0
+    #Название контейнера для управления на стороне разработчика
+    container_name: mysql_container
+    #"Внутренняя сеть" для взаимодействия между контейнерами
+    networks:
+      - app-network
+    #{Порт на стороне разработчика}:{Порт на стороне контейнера}
+    ports:
+      - "3307:3306"
+    #При закрытии повторно запускается
+    restart: always
+    #Папки, в которых происходит дублирование файлов на сторонах >>> {у разработчика}:{внутри контейнера}
+    volumes:
+      - ./database/db:/var/lib/mysql
+    #Заранее заданные внутри контейнера переменные среды для дальнейшего использования
+    environment:
+      - TZ=${ENV_TZ}
+      - MYSQL_ROOT_PASSWORD=${ENV_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${ENV_MYSQL_DATABASE}
+      - MYSQL_USER=${ENV_MYSQL_USER}
+      - MYSQL_PASSWORD=${ENV_MYSQL_PASSWORD}

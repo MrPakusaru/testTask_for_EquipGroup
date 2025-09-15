@@ -1,0 +1,7 @@
+body {
+    background-color: #f8f9fa;
+    height: 100vh;
+}
+nav > ol.breadcrumb {
+    margin-bottom: 0 !important;
+}
